@@ -1,0 +1,17 @@
+# Binaries
+bin/
+distributed-kv/bin/
+
+# Logs
+*.log
+distributed-kv/*.log
+
+# Go specific
+vendor/
+.exe
+.test
+.prof
+
+# OS specific
+.DS_Store
+logs/
