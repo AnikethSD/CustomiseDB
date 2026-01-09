@@ -46,7 +46,7 @@ This application allows you to toggle this trade-off using the `-mode` flag:
 ## 📂 Project Structure
 
 ```text
-distributed-kv/
+customise-db/
 ├── cmd/
 │   ├── master/    # Master node with Consistent Hashing & Replication logic
 │   ├── worker/    # Worker node with storage & forwarding logic

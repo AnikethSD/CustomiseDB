@@ -1,7 +1,7 @@
 package main
 
 import (
-	"distributed-kv/common"
+	"customise-db/common"
 	"fmt"
 	"log"
 	"net/rpc"
