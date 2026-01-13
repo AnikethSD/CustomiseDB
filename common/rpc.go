@@ -28,8 +28,9 @@ type StatsArgs struct{}
 
 // StatsReply holds worker metrics for auto-scaling decisions.
 type StatsReply struct {
-	KeyCount    int   // Current number of keys stored (Memory usage proxy)
-	RequestRate int   // requests per second (CPU usage proxy)
-	MaxKeys     int   // Key limit
-	MaxLoad     int   // Load limit
+	KeyCount    int      // Current number of keys stored (Memory usage proxy)
+	RequestRate int      // requests per second (CPU usage proxy)
+	MaxKeys     int      // Key limit
+	MaxLoad     int      // Load limit
+	Keys        []string // List of all keys stored
 }

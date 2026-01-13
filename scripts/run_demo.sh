@@ -6,9 +6,9 @@ cd "$(dirname "$0")/.."
 MODE=${1:-chain}
 
 cleanup() {
-    echo "Stopping servers..."
-    pkill -f bin/worker 2>/dev/null
-    pkill -f bin/master 2>/dev/null
+    echo "Cleaning up..."
+    pkill -f "bin/worker"; pkill -f "bin/master"; rm -rf logs/*.log
+    sleep 2
 }
 trap cleanup EXIT
 

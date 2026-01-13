@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DistributedKV Command</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+
+<body>
+    <div class="layout">
+        <!-- Top: Main Visualization (The "Space") -->
+        <div class="viewport" id="viewport">
+            <div class="hud-overlay">
+                <div class="hud-top-left">
+                    <h1>DISTRIBUTED_KV // <span id="mode-display">SYNC</span></h1>
+                    <div class="status-indicator">
+                        <span class="led" id="cap-led"></span>
+                        <span id="cap-status">SYSTEM_ONLINE</span>
+                    </div>
+                </div>
+                <div class="hud-top-right">
+                    <div class="metric">
+                        <label>ACTIVE_NODES</label>
+                        <span id="metric-nodes">0</span>
+                    </div>
+                    <div class="metric">
+                        <label>TOTAL_KEYS</label>
+                        <span id="metric-keys">0</span>
+                    </div>
+                </div>
+            </div>
+            <!-- D3 Canvas Container -->
+            <div id="d3-container"></div>
+
+            <!-- Particle Layer -->
+            <canvas id="particle-canvas"></canvas>
+        </div>
+
+        <!-- Bottom: Control Deck -->
+        <div class="deck">
+            <div class="deck-panel config-panel">
+                <h3>SYSTEM_CONFIG</h3>
+                <div class="control-group">
+                    <label>REPLICATION_MODE</label>
+                    <div class="toggle-group" id="mode-toggles">
+                        <button data-mode="sync" class="active">SYNC</button>
+                        <button data-mode="async">ASYNC</button>
+                        <button data-mode="chain">CHAIN</button>
+                        <button data-mode="quorum">QUORUM</button>
+                    </div>
+                </div>
+                <div class="cap-info" id="cap-info">
+                    <strong>CP MODE</strong>: Consistency prioritized. Availability reduced during partitions.
+                </div>
+            </div>
+
+            <div class="deck-panel operations-panel">
+                <h3>DATA_OPERATIONS</h3>
+                <div class="op-group">
+                    <label>PUT_KEY</label>
+                    <div class="input-row">
+                        <input type="text" id="put-key" placeholder="Key (e.g. user:1)" autocomplete="off">
+                        <input type="text" id="put-val" placeholder="Value" autocomplete="off">
+                        <button id="btn-put">WRITE</button>
+                    </div>
+                </div>
+                <div class="op-group">
+                    <label>GET_KEY</label>
+                    <div class="input-row">
+                        <input type="text" id="get-key" placeholder="Key" autocomplete="off">
+                        <button id="btn-get">READ</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="deck-panel inspector-panel">
+                <h3>NODE_INSPECTOR</h3>
+                <div id="inspector-content">
+                    <div class="inspector-empty">SELECT A NODE TO INSPECT</div>
+                </div>
+            </div>
+
+            <div class="deck-panel logs-panel">
+                <h3>EVENT_LOG</h3>
+                <div class="log-stream" id="log-stream">
+                    <div class="log-line"><span class="ts">00:00:00</span> <span class="sys">SYSTEM</span> Initializing
+                        connection...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hover Tooltip -->
+    <div id="tooltip" class="tooltip hidden"></div>
+
+    <script src="dashboard.js"></script>
+</body>
+
+</html>

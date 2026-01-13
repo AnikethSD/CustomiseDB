@@ -101,6 +101,12 @@ func (w *KVWorker) GetStats(args *common.StatsArgs, reply *common.StatsReply) er
 	reply.RequestRate = w.currentRate
 	reply.MaxKeys = w.maxKeys
 	reply.MaxLoad = w.maxLoad
+	
+	// Copy keys
+	reply.Keys = make([]string, 0, len(w.data))
+	for k := range w.data {
+		reply.Keys = append(reply.Keys, k)
+	}
 	return nil
 }
 

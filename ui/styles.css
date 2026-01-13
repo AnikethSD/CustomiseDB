@@ -1,0 +1,343 @@
+:root {
+    --bg-deep: #050510;
+    --bg-panel: rgba(10, 10, 25, 0.85);
+    --border: rgba(60, 100, 255, 0.2);
+    --primary: #00f0ff;
+    --secondary: #7000ff;
+    --success: #00ff9d;
+    --warning: #ffbf00;
+    --danger: #ff0055;
+    --text: #e0e0ff;
+    --text-dim: #606080;
+    --font-mono: 'JetBrains Mono', monospace;
+    --font-ui: 'Inter', sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: var(--bg-deep);
+    color: var(--text);
+    font-family: var(--font-ui);
+    overflow: hidden;
+    height: 100vh;
+}
+
+/* Layout */
+.layout {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.viewport {
+    flex: 1;
+    position: relative;
+    background: radial-gradient(circle at 50% 50%, #101025 0%, #000 100%);
+    overflow: hidden;
+}
+
+.deck {
+    height: 220px;
+    background: #080815;
+    border-top: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: 250px 350px 300px 1fr;
+    gap: 1px;
+    /* border lines */
+    background-image: linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 100% 100%;
+}
+
+.deck-panel {
+    background: var(--bg-panel);
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+}
+
+.deck-panel h3 {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--primary);
+    margin: 0 0 15px 0;
+    letter-spacing: 2px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 5px;
+}
+
+/* HUD */
+.hud-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.hud-top-left h1 {
+    font-family: var(--font-mono);
+    font-size: 1.2rem;
+    margin: 0;
+    text-shadow: 0 0 10px var(--primary);
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 5px;
+    font-size: 0.8rem;
+    font-family: var(--font-mono);
+}
+
+.led {
+    width: 8px;
+    height: 8px;
+    background: var(--success);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--success);
+}
+
+.hud-top-right {
+    text-align: right;
+}
+
+.metric {
+    display: inline-block;
+    margin-left: 20px;
+}
+
+.metric label {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+}
+
+.metric span {
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-family: var(--font-mono);
+}
+
+/* Controls */
+.toggle-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.toggle-group button {
+    flex: 1;
+    background: transparent;
+    border: 1px solid var(--text-dim);
+    color: var(--text-dim);
+    padding: 8px;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.toggle-group button:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+}
+
+.toggle-group button.active {
+    background: rgba(0, 240, 255, 0.1);
+    border-color: var(--primary);
+    color: var(--primary);
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+}
+
+.cap-info {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    border-left: 2px solid var(--primary);
+    padding-left: 10px;
+    margin-top: auto;
+}
+
+/* Operations */
+.op-group {
+    margin-bottom: 15px;
+}
+
+.op-group label {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    margin-bottom: 5px;
+}
+
+.input-row {
+    display: flex;
+    gap: 5px;
+}
+
+.input-row input {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border);
+    color: white;
+    font-family: var(--font-ui);
+    padding: 8px;
+    font-size: 0.8rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.input-row input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.input-row button {
+    background: rgba(0, 240, 255, 0.1);
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    font-family: var(--font-mono);
+    font-weight: bold;
+    cursor: pointer;
+    padding: 0 15px;
+    font-size: 0.75rem;
+    transition: all 0.2s;
+}
+
+.input-row button:hover {
+    background: var(--primary);
+    color: #000;
+}
+
+/* Node Inspector */
+.inspector-panel {
+    overflow-y: hidden;
+    /* Inspector scroll handled inside if needed, or let it overflow */
+}
+
+.inspector-empty {
+    color: var(--text-dim);
+    font-style: italic;
+    font-size: 0.8rem;
+    padding: 20px;
+    text-align: center;
+}
+
+.node-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 5px;
+}
+
+.node-detail-title {
+    font-family: var(--font-mono);
+    color: #fff;
+    font-weight: bold;
+}
+
+.key-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    max-height: 120px;
+    overflow-y: auto;
+    align-content: flex-start;
+}
+
+.key-badge {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-size: 0.7rem;
+    font-family: var(--font-mono);
+    cursor: default;
+}
+
+.key-badge:hover {
+    border-color: var(--primary);
+    background: rgba(0, 240, 255, 0.1);
+}
+
+/* Logs */
+.log-stream {
+    flex: 1;
+    overflow-y: auto;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.log-line {
+    padding: 2px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.ts {
+    color: var(--text-dim);
+    margin-right: 5px;
+}
+
+.sys {
+    color: var(--primary);
+    margin-right: 5px;
+}
+
+.info {
+    color: var(--text);
+}
+
+.success {
+    color: var(--success);
+}
+
+.error {
+    color: var(--danger);
+}
+
+/* Visualization Layer */
+#d3-container,
+#particle-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+#particle-canvas {
+    pointer-events: none;
+}
+
+/* Let clicks pass through to SVG */
+
+.tooltip {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.9);
+    border: 1px solid var(--primary);
+    padding: 10px;
+    border-radius: 4px;
+    pointer-events: none;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    z-index: 100;
+}
+
+.hidden {
+    display: none;
+}

@@ -2,6 +2,7 @@ package main
 
 import (
 	"customise-db/common"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"hash/crc32"
@@ -87,6 +88,7 @@ type Master struct {
 	ring    *ConsistentHash
 	mode    string
 	mu      sync.RWMutex
+	lastScale time.Time
 }
 
 // getReplicas returns the addresses of the workers that should store this key.
@@ -299,6 +301,113 @@ func callWorker(addr string, method string, args interface{}, reply interface{})
 	return client.Call(method, args, reply)
 }
 
+func enableCors(w http.ResponseWriter) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+}
+
+// API Structs
+type StatusResponse struct {
+	Nodes  []string     `json:"nodes"`
+	Mode   string       `json:"mode"`
+	Stats  []WorkerStat `json:"stats"`
+	Config SystemConfig `json:"config"`
+}
+
+type WorkerStat struct {
+	Address     string   `json:"address"`
+	KeyCount    int      `json:"key_count"`
+	RequestRate int      `json:"request_rate"`
+	MaxKeys     int      `json:"max_keys"`
+	MaxLoad     int      `json:"max_load"`
+	Keys        []string `json:"keys"`
+}
+
+type SystemConfig struct {
+	Replicas int `json:"replicas"`
+}
+
+type ConfigRequest struct {
+	Mode string `json:"mode"`
+}
+
+func (m *Master) handleStatus(w http.ResponseWriter, r *http.Request) {
+	enableCors(w)
+	if r.Method == "OPTIONS" {
+		return
+	}
+
+	m.mu.RLock()
+	nodes := make([]string, len(m.workers))
+	copy(nodes, m.workers)
+	mode := m.mode
+	replicas := m.ring.replicas
+	m.mu.RUnlock()
+
+	stats := []WorkerStat{}
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	for _, node := range nodes {
+		wg.Add(1)
+		go func(addr string) {
+			defer wg.Done()
+			var s common.StatsReply
+			if err := callWorker(addr, "KV.GetStats", &common.StatsArgs{}, &s); err == nil {
+				mu.Lock()
+				stats = append(stats, WorkerStat{
+					Address:     addr,
+					KeyCount:    s.KeyCount,
+					RequestRate: s.RequestRate,
+					MaxKeys:     s.MaxKeys,
+					MaxLoad:     s.MaxLoad,
+					Keys:        s.Keys,
+				})
+				mu.Unlock()
+			}
+		}(node)
+	}
+	wg.Wait()
+
+	resp := StatusResponse{
+		Nodes: nodes,
+		Mode:  mode,
+		Stats: stats,
+		Config: SystemConfig{
+			Replicas: replicas,
+		},
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}
+
+func (m *Master) handleConfig(w http.ResponseWriter, r *http.Request) {
+	enableCors(w)
+	if r.Method == "OPTIONS" {
+		return
+	}
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", 405)
+		return
+	}
+
+	var req ConfigRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	m.mu.Lock()
+	if req.Mode != "" {
+		m.mode = req.Mode
+		log.Printf("[Config] Mode changed to %s", m.mode)
+	}
+	m.mu.Unlock()
+
+	w.WriteHeader(http.StatusOK)
+}
+
 // ---- Auto-Scaling Logic ----
 
 func (m *Master) monitorAndScale() {
@@ -313,7 +422,13 @@ func (m *Master) scaleCheck() {
 	m.mu.RLock()
 	workers := make([]string, len(m.workers))
 	copy(workers, m.workers)
+	lastScale := m.lastScale
 	m.mu.RUnlock()
+
+	// Cooldown Check (10 seconds)
+	if time.Since(lastScale) < 10*time.Second {
+		return
+	}
 
 	var overload bool
 	
@@ -379,6 +494,8 @@ func (m *Master) scaleUp() {
 		return
 	}
 
+	m.lastScale = time.Now()
+
 	// 3. Add to Ring
 	// Wait a bit for it to come up
 	time.Sleep(1 * time.Second) 
@@ -417,6 +534,7 @@ func main() {
 
 	// HTTP Gateway
 	http.HandleFunc("/put", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(w)
 		key, val := r.URL.Query().Get("key"), r.URL.Query().Get("value")
 		if key == "" || val == "" {
 			http.Error(w, "missing params", 400)
@@ -430,6 +548,7 @@ func main() {
 	})
 
 	http.HandleFunc("/get", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(w)
 		key := r.URL.Query().Get("key")
 		reply := &common.GetReply{}
 		if err := master.Get(&common.GetArgs{Key: key}, reply); err != nil {
@@ -442,11 +561,21 @@ func main() {
 		}
 		fmt.Fprintf(w, "%s\n", reply.Value)
 	})
+
+	http.HandleFunc("/status", master.handleStatus)
+	http.HandleFunc("/config", master.handleConfig)
+
+	// Serve UI
+	fs := http.FileServer(http.Dir("./ui"))
+	http.Handle("/", fs)
 	
 	// Start HTTP Server for Client
 	go http.ListenAndServe(":8080", nil)
 
-	l, _ := net.Listen("tcp", ":"+masterPort)
+	l, e := net.Listen("tcp", ":"+masterPort)
+	if e != nil {
+		log.Fatal("listen error:", e)
+	}
 	log.Printf("Master started on %s with %d workers (Mode: %s)", masterPort, len(workerAddrs), *mode)
 	for {
 		conn, _ := l.Accept()

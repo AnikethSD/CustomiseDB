@@ -112,6 +112,16 @@ The Master exposes an HTTP interface for simple interaction:
 -   **Put**: `curl "http://localhost:8080/put?key=foo&value=bar"`
 -   **Get**: `curl "http://localhost:8080/get?key=foo"`
 
+## 🖥️ Web Dashboard (New!)
+
+A real-time dashboard is available at **http://localhost:8080** when the Master is running.
+
+### Features
+-   **Visual Hash Ring**: See how virtual nodes map to physical workers.
+-   **Live Metrics**: Monitor key counts and request rates per node.
+-   **CAP Tuning**: Switch Replication Modes (Sync/Async/Chain/Quorum) dynamically and see the **CP vs AP** trade-off.
+-   **Auto-Scaling**: Watch new nodes appear on the ring as load increases.
+
 ## 🧪 Cleanup
 To stop all background processes (master/workers) and clean logs:
 
