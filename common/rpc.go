@@ -22,3 +22,14 @@ type GetReply struct {
 	Value string
 	Found bool
 }
+
+// StatsArgs represents a request for worker statistics.
+type StatsArgs struct{}
+
+// StatsReply holds worker metrics for auto-scaling decisions.
+type StatsReply struct {
+	KeyCount    int   // Current number of keys stored (Memory usage proxy)
+	RequestRate int   // requests per second (CPU usage proxy)
+	MaxKeys     int   // Key limit
+	MaxLoad     int   // Load limit
+}

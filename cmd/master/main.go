@@ -9,10 +9,13 @@ import (
 	"net"
 	"net/http"
 	"net/rpc"
+	"os"
+	"os/exec"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 // ConsistentHash handles the ring logic.
@@ -83,14 +86,21 @@ type Master struct {
 	workers []string // Keep for reference
 	ring    *ConsistentHash
 	mode    string
+	mu      sync.RWMutex
 }
 
 // getReplicas returns the addresses of the workers that should store this key.
 func (m *Master) getReplicas(key string) []string {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	// Determine RF based on worker count
 	rf := 2
 	if len(m.workers) >= 3 {
 		rf = 3
+	}
+	// Avoid asking for more replicas than workers
+	if rf > len(m.workers) {
+		rf = len(m.workers)
 	}
 	return m.ring.GetN(key, rf)
 }
@@ -289,6 +299,95 @@ func callWorker(addr string, method string, args interface{}, reply interface{})
 	return client.Call(method, args, reply)
 }
 
+// ---- Auto-Scaling Logic ----
+
+func (m *Master) monitorAndScale() {
+	ticker := time.NewTicker(2 * time.Second)
+	log.Println("[AutoScaler] Started monitoring...")
+	for range ticker.C {
+		m.scaleCheck()
+	}
+}
+
+func (m *Master) scaleCheck() {
+	m.mu.RLock()
+	workers := make([]string, len(m.workers))
+	copy(workers, m.workers)
+	m.mu.RUnlock()
+
+	var overload bool
+	
+	for _, w := range workers {
+		stats := &common.StatsReply{}
+		if err := callWorker(w, "KV.GetStats", &common.StatsArgs{}, stats); err == nil {
+			// Rule 1: Key Capacity (> 80%)
+			if stats.MaxKeys > 0 && float64(stats.KeyCount) >= float64(stats.MaxKeys)*0.8 {
+				log.Printf("[AutoScaler] Worker %s is overloaded (Keys: %d/%d)", w, stats.KeyCount, stats.MaxKeys)
+				overload = true
+			}
+			// Rule 2: Load Capacity (> 80%)
+			if stats.MaxLoad > 0 && float64(stats.RequestRate) >= float64(stats.MaxLoad)*0.8 {
+				log.Printf("[AutoScaler] Worker %s is overloaded (Load: %d/%d req/s)", w, stats.RequestRate, stats.MaxLoad)
+				overload = true
+			}
+		}
+	}
+
+	if overload {
+		m.scaleUp()
+	}
+}
+
+func (m *Master) scaleUp() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// 1. Find the next available port
+	maxPort := 0
+	for _, w := range m.workers {
+		parts := strings.Split(w, ":")
+		if len(parts) == 2 {
+			if p, err := strconv.Atoi(parts[1]); err == nil {
+				if p > maxPort {
+					maxPort = p
+				}
+			}
+		}
+	}
+	if maxPort == 0 {
+		maxPort = 8000
+	}
+	newPort := maxPort + 1
+	newAddr := fmt.Sprintf("localhost:%d", newPort)
+
+	log.Printf("[AutoScaler] Scaling Up! Starting new worker on %s...", newAddr)
+
+	// 2. Start the process
+	// Note: We inherit limits from a default or random. For now, let's just give it the same limits if we knew them, 
+	// but we don't easily know them here without tracking config. 
+	// We'll spawn with default (unlimited) or generic limits for the demo.
+	// Actually, let's give it generous limits: 1000 keys, 1000 req/s
+	cmd := exec.Command("go", "run", "./cmd/worker/main.go", "-max-keys=1000", "-max-load=100", strconv.Itoa(newPort))
+	
+	// Redirect logs so we can see them
+	logFile, _ := os.Create(fmt.Sprintf("logs/w%d.log", newPort))
+	cmd.Stdout = logFile
+	cmd.Stderr = logFile
+	
+	if err := cmd.Start(); err != nil {
+		log.Printf("[AutoScaler] Failed to start worker: %v", err)
+		return
+	}
+
+	// 3. Add to Ring
+	// Wait a bit for it to come up
+	time.Sleep(1 * time.Second) 
+	
+	m.ring.Add(newAddr)
+	m.workers = append(m.workers, newAddr)
+	log.Printf("[AutoScaler] Worker %s added to cluster. Total workers: %d", newAddr, len(m.workers))
+}
+
 func main() {
 	mode := flag.String("mode", "sync", "Replication mode: sync, async, chain, quorum")
 	flag.Parse()
@@ -312,6 +411,9 @@ func main() {
 	}
 	rpc.RegisterName("KV", master)
 	rpc.HandleHTTP()
+	
+	// Start AutoScaler
+	go master.monitorAndScale()
 
 	// HTTP Gateway
 	http.HandleFunc("/put", func(w http.ResponseWriter, r *http.Request) {
