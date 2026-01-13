@@ -2,6 +2,8 @@
 
 An educational implementation of a distributed key-value store in Go, demonstrating fundamental distributed systems concepts like Master-Worker architecture, Consistent Hashing, Replication, and RPC.
 
+> **Note**: This project is for **learning and demonstration purposes only**. The code was extensively written with the assistance of **Google Gemini**.
+
 ## 🏗️ Architecture
 
 The system consists of three main components:
@@ -52,6 +54,7 @@ customise-db/
 │   ├── worker/    # Worker node with storage & forwarding logic
 │   └── client/    # Simple RPC client
 ├── common/        # Shared RPC argument/reply structures
+├── ui/            # Web Dashboard (HTML/CSS/JS)
 ├── scripts/       # Helper scripts
 │   ├── run_demo.sh      # Demo script (default: chain replication)
 │   └── test_all_modes.sh # Integration tests for all 4 modes
@@ -118,6 +121,8 @@ A real-time dashboard is available at **http://localhost:8080** when the Master 
 
 ### Features
 -   **Visual Hash Ring**: See how virtual nodes map to physical workers.
+-   **Node Inspector**: Click on any node to view its real-time metrics and the **live list of keys** it stores.
+-   **Data Operations**: Use the built-in control panel to `Put` and `Get` data directly from the UI.
 -   **Live Metrics**: Monitor key counts and request rates per node.
 -   **CAP Tuning**: Switch Replication Modes (Sync/Async/Chain/Quorum) dynamically and see the **CP vs AP** trade-off.
 -   **Auto-Scaling**: Watch new nodes appear on the ring as load increases.
